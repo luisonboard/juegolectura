@@ -223,6 +223,7 @@ const formar = {
     $('#btn-lento').addEventListener('click', () => formar.decir(0.45));
     $('#btn-palabra').addEventListener('click', () => formar.decirPalabra());
     $('#btn-letras').addEventListener('click', () => formar.decirLetras());
+    $('#btn-limpiar').addEventListener('click', () => { sonidos.pop(); formar.limpiar(); });
     // Tocar una ranura dice el nombre de la letra que contiene.
     $('#ranura-consonante').addEventListener('click', () => {
       if (!formar.consonante) return;
@@ -250,7 +251,8 @@ const formar = {
       b.classList.toggle('deshabilitada', !!c.soloCon && !c.soloCon.includes(b.dataset.vocal));
     });
     if (formar.vocal && c.soloCon && !c.soloCon.includes(formar.vocal)) formar.quitarVocal();
-    if (formar.vocal) formar.combinar();
+    // Siempre se dice el nombre de la letra; si ya hay vocal, después suena la sílaba.
+    if (formar.vocal) formar.combinar({ anunciarLetra: true });
     else { $('#pista').textContent = 'Ahora toca una vocal 🎈'; voz.hablar(pronunciarNombre(c.nombre)); }
   },
 
@@ -275,7 +277,7 @@ const formar = {
     $('#nombre-vocal').textContent = '';
   },
 
-  combinar() {
+  combinar({ anunciarLetra = false } = {}) {
     const silaba = formarSilaba(formar.consonante.letra, formar.vocal);
     formar.silaba = silaba;
     const res = $('#resultado');
@@ -298,7 +300,22 @@ const formar = {
     $('#pista').textContent = '¡Escucha! Prueba con otra vocal 🎉';
     confeti(18);
     escribe.fijarSilaba(silaba);
-    formar.decir(0.85);
+    if (anunciarLetra) voz.hablar(`${pronunciarNombre(formar.consonante.nombre)}. ${pronunciar(silaba)}`, { rate: 0.85 });
+    else formar.decir(0.85);
+  },
+
+  // Vacía las dos casillas para volver a explorar letras sueltas.
+  limpiar() {
+    formar.consonante = null; formar.silaba = null;
+    formar.quitarVocal();
+    document.querySelectorAll('.consonante').forEach((b) => b.classList.remove('seleccionada'));
+    document.querySelectorAll('.vocal').forEach((b) => b.classList.remove('deshabilitada'));
+    const ranura = $('#ranura-consonante');
+    ranura.dataset.vacia = 'true'; ranura.style.background = '';
+    ranura.querySelector('.letra').textContent = ''; $('#nombre-consonante').textContent = '';
+    const res = $('#resultado'); res.classList.remove('listo'); res.querySelector('.letra').textContent = '?';
+    $('#palabra').hidden = true; $('#botones-tarjeta').hidden = true;
+    $('#pista').textContent = 'Toca una consonante 👇';
   },
 
   decir(rate) {
