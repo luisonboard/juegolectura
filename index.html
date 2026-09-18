@@ -30,6 +30,7 @@
       <h1>Mis Sílabas</h1>
     </div>
     <div class="acciones">
+      <button class="chip" id="btn-ajustes" type="button" aria-label="Elegir voz">🎤</button>
       <button class="chip" id="btn-caso" type="button" aria-label="Cambiar entre mayúsculas y minúsculas">Aa</button>
       <div class="estrellas" id="estrellas" aria-live="polite">⭐ <span id="num-estrellas">0</span></div>
     </div>
@@ -103,6 +104,22 @@
     <button class="pestana" data-pantalla="adivina" type="button"><span>🎧</span>Adivina</button>
     <button class="pestana" data-pantalla="escribe" type="button"><span>✍️</span>Escribe</button>
   </nav>
+
+  <div class="modal" id="modal-ajustes" hidden>
+    <div class="modal-caja" role="dialog" aria-labelledby="titulo-ajustes">
+      <h2 id="titulo-ajustes">🎤 Voz que lee</h2>
+      <p class="modal-texto">Elige la voz en español que mejor suene en este dispositivo.</p>
+      <select id="voz-select" class="selector"></select>
+      <p class="modal-texto" id="voz-ayuda" hidden>
+        Instala una voz en español: en iPhone ve a Ajustes → Accesibilidad → Contenido leído → Voces → Español.
+        En Android: Ajustes → Salida de texto a voz → instalar voz en español.
+      </p>
+      <div class="botones-tarjeta">
+        <button class="boton" id="btn-probar-voz" type="button">🔊 Probar</button>
+        <button class="boton boton-lento" id="btn-cerrar-ajustes" type="button">✅ Listo</button>
+      </div>
+    </div>
+  </div>
 
   <div class="confeti" id="confeti" aria-hidden="true"></div>
   <div class="aviso" id="aviso" hidden></div>

@@ -24,9 +24,15 @@ Detalles pensados para su edad:
 
 ## Voz
 
-Usa la Web Speech API del navegador y elige siempre una voz en **español**
-(prioriza es-MX, es-US y es-419, luego es-ES). Si el dispositivo no tiene ninguna
-voz en español instalada, conviene añadirla:
+Usa la Web Speech API del navegador y elige siempre una voz en **español**.
+Prefiere automáticamente las voces femeninas y de mejor calidad (Paulina, Mónica,
+Sabina, las "mejoradas" de iOS, etc.) y evita las masculinas graves. Con el botón
+**🎤** de la cabecera se puede escuchar y elegir otra voz; la elección se guarda.
+
+Las sílabas se envían al lector con la vocal acentuada ("pá", "nú"): así Safari no
+las confunde con abreviaturas ("pa" → "por autorización") y pronuncia la vocal completa.
+
+Si el dispositivo no tiene ninguna voz en español instalada, conviene añadirla:
 
 - **Android**: Ajustes → Sistema → Idioma → Salida de texto a voz → Motor de Google → instalar datos de voz en español.
 - **iOS/iPadOS**: Ajustes → Accesibilidad → Contenido leído → Voces → Español.

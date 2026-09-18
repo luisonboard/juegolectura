@@ -36,6 +36,15 @@ export function formarSilaba(consonante, vocal) {
   return consonante + vocal;
 }
 
+// Texto que se envía al sintetizador de voz para que lea la sílaba como tal.
+// Con la vocal acentuada ("pá", "nú") los lectores de voz (sobre todo en iPhone)
+// no la confunden con una abreviatura ("pa" → "por autorización") ni la cortan.
+const TILDES = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
+export function pronunciar(silaba) {
+  const ultima = silaba[silaba.length - 1];
+  return TILDES[ultima] ? silaba.slice(0, -1) + TILDES[ultima] : silaba;
+}
+
 // Palabra de ejemplo + emoji para cada sílaba (clave = sílaba escrita).
 export const PALABRAS = {
   ma: ['mamá', '👩'], me: ['mesa', '🍽️'], mi: ['miel', '🍯'], mo: ['mono', '🐵'], mu: ['muñeca', '🪆'],

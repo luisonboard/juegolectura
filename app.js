@@ -1,4 +1,4 @@
-import { VOCALES, CONSONANTES, PALABRAS, FELICITACIONES, formarSilaba } from './data.js';
+import { VOCALES, CONSONANTES, PALABRAS, FELICITACIONES, formarSilaba, pronunciar } from './data.js';
 
 const $ = (sel) => document.querySelector(sel);
 const azar = (lista) => lista[Math.floor(Math.random() * lista.length)];
@@ -7,19 +7,47 @@ const mezclar = (lista) => lista.map((v) => [Math.random(), v]).sort((a, b) => a
 /* =========================================================
    VOZ (Web Speech API)
    ========================================================= */
+// Voces conocidas: se prefieren las femeninas y de mejor calidad, que suenan
+// más claras y amigables para un niño. Las masculinas graves se evitan.
+const VOCES_PREFERIDAS = [
+  'paulina', 'mónica', 'monica', 'angélica', 'angelica', 'sabina', 'dalia', 'elvira', 'helena', 'laura',
+  'lucía', 'lucia', 'esperanza', 'marisol', 'penélope', 'penelope', 'google español', 'google us spanish',
+];
+const VOCES_EVITADAS = ['jorge', 'juan', 'diego', 'carlos', 'pablo', 'raúl', 'raul', 'andrés', 'andres', 'enrique', 'álvaro', 'alvaro'];
+const IDIOMAS_PRIORIDAD = ['es-MX', 'es-US', 'es-419', 'es-CO', 'es-AR', 'es-ES'];
+
+function puntuarVoz(v) {
+  const nombre = (v.name || '').toLowerCase();
+  const uri = (v.voiceURI || '').toLowerCase();
+  const lang = (v.lang || '').replace('_', '-');
+  let puntos = 0;
+  if (VOCES_PREFERIDAS.some((n) => nombre.includes(n))) puntos += 40;
+  if (VOCES_EVITADAS.some((n) => nombre.includes(n))) puntos -= 40;
+  if (/enhanced|premium|natural|neural|mejorad|siri/.test(nombre + ' ' + uri)) puntos += 25;
+  if (/compact|eloquence|espeak/.test(nombre + ' ' + uri)) puntos -= 15;
+  const i = IDIOMAS_PRIORIDAD.indexOf(lang);
+  puntos += i === -1 ? 0 : (IDIOMAS_PRIORIDAD.length - i) * 2;
+  if (v.localService) puntos += 3;
+  return puntos;
+}
+
 const voz = {
   voces: [],
+  elegida: null,
   avisado: false,
   cargar() {
     if (!('speechSynthesis' in window)) return;
     const todas = speechSynthesis.getVoices();
-    const prioridad = ['es-MX', 'es-US', 'es-419', 'es-CO', 'es-AR', 'es-ES'];
     const enEspanol = todas.filter((v) => v.lang && v.lang.toLowerCase().startsWith('es'));
-    enEspanol.sort((a, b) => {
-      const ia = prioridad.indexOf(a.lang.replace('_', '-')); const ib = prioridad.indexOf(b.lang.replace('_', '-'));
-      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-    });
+    enEspanol.sort((a, b) => puntuarVoz(b) - puntuarVoz(a));
     voz.voces = enEspanol;
+    const guardada = localStorage.getItem('silabas.voz');
+    voz.elegida = enEspanol.find((v) => v.voiceURI === guardada) || enEspanol[0] || null;
+    ajustes.pintarVoces();
+  },
+  elegir(voiceURI) {
+    voz.elegida = voz.voces.find((v) => v.voiceURI === voiceURI) || voz.elegida;
+    if (voz.elegida) localStorage.setItem('silabas.voz', voz.elegida.voiceURI);
   },
   hablar(texto, { rate = 0.85, pitch = 1.15, alTerminar } = {}) {
     if (!('speechSynthesis' in window)) {
@@ -30,17 +58,49 @@ const voz = {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(texto);
     if (!voz.voces.length) voz.cargar();
-    if (voz.voces[0]) { u.voice = voz.voces[0]; u.lang = voz.voces[0].lang; } else { u.lang = 'es-ES'; }
+    if (voz.elegida) { u.voice = voz.elegida; u.lang = voz.elegida.lang; } else { u.lang = 'es-MX'; }
     u.rate = rate; u.pitch = pitch; u.volume = 1;
     if (alTerminar) { u.onend = alTerminar; u.onerror = alTerminar; }
     // Pequeña espera: algunos navegadores ignoran el "speak" justo después del "cancel".
     setTimeout(() => speechSynthesis.speak(u), 40);
   },
+  // Lee una sílaba (con la vocal acentuada para que suene completa y no como abreviatura).
+  silaba(silaba, opciones = {}) { voz.hablar(pronunciar(silaba), opciones); },
 };
 if ('speechSynthesis' in window) {
-  voz.cargar();
   speechSynthesis.addEventListener('voiceschanged', voz.cargar);
+  // En iPhone la lista de voces a veces solo se llena tras el primer toque.
+  window.addEventListener('pointerdown', () => { if (!voz.voces.length) voz.cargar(); }, { once: true });
 }
+
+/* =========================================================
+   AJUSTES (elección de voz)
+   ========================================================= */
+const ajustes = {
+  pintarVoces() {
+    const sel = $('#voz-select'); if (!sel) return;
+    sel.innerHTML = '';
+    if (!voz.voces.length) {
+      const o = document.createElement('option'); o.textContent = 'No hay voces en español instaladas'; sel.appendChild(o);
+      $('#voz-ayuda').hidden = false;
+      return;
+    }
+    $('#voz-ayuda').hidden = true;
+    voz.voces.forEach((v) => {
+      const o = document.createElement('option');
+      o.value = v.voiceURI; o.textContent = `${v.name} (${v.lang})`;
+      if (voz.elegida && v.voiceURI === voz.elegida.voiceURI) o.selected = true;
+      sel.appendChild(o);
+    });
+  },
+  iniciar() {
+    $('#btn-ajustes').addEventListener('click', () => { sonidos.pop(); voz.cargar(); $('#modal-ajustes').hidden = false; });
+    $('#btn-cerrar-ajustes').addEventListener('click', () => { sonidos.pop(); $('#modal-ajustes').hidden = true; });
+    $('#modal-ajustes').addEventListener('click', (e) => { if (e.target.id === 'modal-ajustes') $('#modal-ajustes').hidden = true; });
+    $('#voz-select').addEventListener('change', (e) => { voz.elegir(e.target.value); voz.hablar('Hola, soy tu nueva voz. ¡Vamos a leer!', { rate: 0.95 }); });
+    $('#btn-probar-voz').addEventListener('click', () => voz.hablar(`${pronunciar('ma')}, ${pronunciar('pa')}, ${pronunciar('nu')}. Mamá, papá, nube.`, { rate: 0.85 }));
+  },
+};
 
 /* =========================================================
    SONIDOS (WebAudio: pops y campanitas)
@@ -190,7 +250,7 @@ const formar = {
     ranura.dataset.vacia = 'false';
     ranura.querySelector('.letra').textContent = v;
     if (formar.consonante) formar.combinar();
-    else { $('#pista').textContent = 'Ahora toca una consonante 🎈'; voz.hablar(v); }
+    else { $('#pista').textContent = 'Ahora toca una consonante 🎈'; voz.silaba(v); }
   },
 
   quitarVocal() {
@@ -228,12 +288,12 @@ const formar = {
 
   decir(rate) {
     if (!formar.silaba) return;
-    voz.hablar(formar.silaba, { rate });
+    voz.silaba(formar.silaba, { rate });
   },
 
   decirPalabra() {
     const datos = PALABRAS[formar.silaba]; if (!datos) return;
-    voz.hablar(`${formar.silaba}... ${datos[0]}`, { rate: 0.8 });
+    voz.hablar(`${pronunciar(formar.silaba)}... ${datos[0]}`, { rate: 0.8 });
   },
 };
 
@@ -290,7 +350,7 @@ const adivina = {
     if (!adivina.objetivo) return;
     const btn = $('#btn-repetir');
     btn.classList.add('sonando');
-    voz.hablar(adivina.objetivo.silaba, { rate: 0.8, alTerminar: () => btn.classList.remove('sonando') });
+    voz.silaba(adivina.objetivo.silaba, { rate: 0.8, alTerminar: () => btn.classList.remove('sonando') });
   },
 
   responder(op, boton) {
@@ -302,7 +362,7 @@ const adivina = {
       adivina.racha += 1; estrellas.sumar(1);
       $('#mascota').classList.add('saltando');
       setTimeout(() => $('#mascota').classList.remove('saltando'), 700);
-      voz.hablar(`${azar(FELICITACIONES)} ${op.silaba}`, { rate: 0.95 });
+      voz.hablar(`${azar(FELICITACIONES)} ${pronunciar(op.silaba)}`, { rate: 0.95 });
       setTimeout(() => adivina.nuevaRonda(), 1700);
     } else {
       sonidos.error();
@@ -337,8 +397,8 @@ const escribe = {
     l.addEventListener('pointercancel', escribe.terminar);
     l.addEventListener('pointerleave', escribe.terminar);
     $('#btn-borrar').addEventListener('click', () => { sonidos.pop(); escribe.trazos = []; escribe.pintar(); });
-    $('#btn-otra').addEventListener('click', () => { sonidos.pop(); escribe.fijarSilaba(azar(TODAS_LAS_SILABAS).silaba); voz.hablar(escribe.silaba, { rate: 0.8 }); });
-    $('#btn-oir-trazo').addEventListener('click', () => voz.hablar(escribe.silaba, { rate: 0.8 }));
+    $('#btn-otra').addEventListener('click', () => { sonidos.pop(); escribe.fijarSilaba(azar(TODAS_LAS_SILABAS).silaba); voz.silaba(escribe.silaba, { rate: 0.8 }); });
+    $('#btn-oir-trazo').addEventListener('click', () => voz.silaba(escribe.silaba, { rate: 0.8 }));
     document.querySelectorAll('.crayon').forEach((c) => {
       c.addEventListener('click', () => {
         sonidos.pop();
@@ -467,6 +527,8 @@ window.addEventListener('appinstalled', () => { $('#btn-instalar')?.remove(); av
 formar.iniciar();
 adivina.iniciar();
 escribe.iniciar();
+ajustes.iniciar();
 caso.aplicar();
+voz.cargar();
 // Repintar la guía cuando la fuente web termine de cargar.
 document.fonts?.ready.then(() => escribe.pintar());
