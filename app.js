@@ -1,4 +1,4 @@
-import { VOCALES, CONSONANTES, PALABRAS, FELICITACIONES, formarSilaba, pronunciar } from './data.js';
+import { VOCALES, CONSONANTES, PALABRAS, FELICITACIONES, formarSilaba, pronunciar, pronunciarNombre } from './data.js';
 
 const $ = (sel) => document.querySelector(sel);
 const azar = (lista) => lista[Math.floor(Math.random() * lista.length)];
@@ -222,6 +222,18 @@ const formar = {
     $('#btn-oir').addEventListener('click', () => formar.decir(0.85));
     $('#btn-lento').addEventListener('click', () => formar.decir(0.45));
     $('#btn-palabra').addEventListener('click', () => formar.decirPalabra());
+    $('#btn-letras').addEventListener('click', () => formar.decirLetras());
+    // Tocar una ranura dice el nombre de la letra que contiene.
+    $('#ranura-consonante').addEventListener('click', () => {
+      if (!formar.consonante) return;
+      sonidos.pop(); rebotar($('#ranura-consonante'));
+      voz.hablar(`La letra ${pronunciarNombre(formar.consonante.nombre)}`, { rate: 0.85 });
+    });
+    $('#ranura-vocal').addEventListener('click', () => {
+      if (!formar.vocal) return;
+      sonidos.pop(); rebotar($('#ranura-vocal'));
+      voz.hablar(`La vocal ${pronunciar(formar.vocal)}`, { rate: 0.85 });
+    });
   },
 
   elegirConsonante(c, boton) {
@@ -232,13 +244,14 @@ const formar = {
     const ranura = $('#ranura-consonante');
     ranura.dataset.vacia = 'false'; ranura.style.background = c.color;
     ranura.querySelector('.letra').textContent = c.letra;
+    $('#nombre-consonante').textContent = c.nombre;
     // Algunas consonantes solo se juntan con ciertas vocales (la "q" con e/i).
     document.querySelectorAll('.vocal').forEach((b) => {
       b.classList.toggle('deshabilitada', !!c.soloCon && !c.soloCon.includes(b.dataset.vocal));
     });
     if (formar.vocal && c.soloCon && !c.soloCon.includes(formar.vocal)) formar.quitarVocal();
     if (formar.vocal) formar.combinar();
-    else { $('#pista').textContent = 'Ahora toca una vocal 🎈'; voz.hablar(c.nombre); }
+    else { $('#pista').textContent = 'Ahora toca una vocal 🎈'; voz.hablar(pronunciarNombre(c.nombre)); }
   },
 
   elegirVocal(v, boton) {
@@ -249,6 +262,7 @@ const formar = {
     const ranura = $('#ranura-vocal');
     ranura.dataset.vacia = 'false';
     ranura.querySelector('.letra').textContent = v;
+    $('#nombre-vocal').textContent = 'vocal';
     if (formar.consonante) formar.combinar();
     else { $('#pista').textContent = 'Ahora toca una consonante 🎈'; voz.silaba(v); }
   },
@@ -258,6 +272,7 @@ const formar = {
     document.querySelectorAll('.vocal').forEach((b) => b.classList.remove('seleccionada'));
     const ranura = $('#ranura-vocal');
     ranura.dataset.vacia = 'true'; ranura.querySelector('.letra').textContent = '';
+    $('#nombre-vocal').textContent = '';
   },
 
   combinar() {
@@ -289,6 +304,13 @@ const formar = {
   decir(rate) {
     if (!formar.silaba) return;
     voz.silaba(formar.silaba, { rate });
+  },
+
+  // Deletrea: nombre de la letra, la vocal y cómo suenan juntas.
+  decirLetras() {
+    if (!formar.silaba) return;
+    const nombre = pronunciarNombre(formar.consonante.nombre);
+    voz.hablar(`${nombre}. ${pronunciar(formar.vocal)}. ${pronunciar(formar.silaba)}`, { rate: 0.75 });
   },
 
   decirPalabra() {
@@ -384,7 +406,7 @@ const escribe = {
   silaba: 'ma',
   color: '#e8590c',
   lienzo: null, ctx: null,
-  trazos: [],
+  trazos: [],        // puntos normalizados (0..1) para que sobrevivan a cambios de tamaño
   dibujando: false,
 
   iniciar() {
@@ -395,7 +417,6 @@ const escribe = {
     l.addEventListener('pointermove', escribe.mover);
     l.addEventListener('pointerup', escribe.terminar);
     l.addEventListener('pointercancel', escribe.terminar);
-    l.addEventListener('pointerleave', escribe.terminar);
     $('#btn-borrar').addEventListener('click', () => { sonidos.pop(); escribe.trazos = []; escribe.pintar(); });
     $('#btn-otra').addEventListener('click', () => { sonidos.pop(); escribe.fijarSilaba(azar(TODAS_LAS_SILABAS).silaba); voz.silaba(escribe.silaba, { rate: 0.8 }); });
     $('#btn-oir-trazo').addEventListener('click', () => voz.silaba(escribe.silaba, { rate: 0.8 }));
@@ -406,6 +427,18 @@ const escribe = {
         c.classList.add('activo'); escribe.color = c.dataset.color;
       });
     });
+    // El lienzo se adapta al espacio disponible (ancho completo, alto restante).
+    new ResizeObserver(() => escribe.ajustarTamano()).observe($('#lienzo-envoltura'));
+    escribe.ajustarTamano();
+  },
+
+  ajustarTamano() {
+    const caja = $('#lienzo-envoltura');
+    const ancho = caja.clientWidth, alto = caja.clientHeight;
+    if (!ancho || !alto) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    escribe.lienzo.width = Math.round(ancho * dpr);
+    escribe.lienzo.height = Math.round(alto * dpr);
     escribe.pintar();
   },
 
@@ -415,7 +448,7 @@ const escribe = {
 
   punto(ev) {
     const r = escribe.lienzo.getBoundingClientRect();
-    return { x: (ev.clientX - r.left) * (escribe.lienzo.width / r.width), y: (ev.clientY - r.top) * (escribe.lienzo.height / r.height) };
+    return { x: (ev.clientX - r.left) / r.width, y: (ev.clientY - r.top) / r.height };
   },
 
   empezar(ev) {
@@ -441,34 +474,41 @@ const escribe = {
   pintarGuia() {
     if (!escribe.ctx) return;
     const { ctx, lienzo } = escribe;
+    const W = lienzo.width, H = lienzo.height;
     const texto = caso.mostrar(escribe.silaba);
-    let tam = 230;
-    ctx.font = `700 ${tam}px ${getComputedStyle(document.body).fontFamily}`;
-    while (ctx.measureText(texto).width > lienzo.width * 0.85 && tam > 60) {
-      tam -= 10; ctx.font = `700 ${tam}px ${getComputedStyle(document.body).fontFamily}`;
+    const fuente = getComputedStyle(document.body).fontFamily;
+    // La letra se hace tan grande como quepa: 88% del ancho y 70% del alto.
+    let tam = Math.floor(H * 0.7);
+    ctx.font = `700 ${tam}px ${fuente}`;
+    while (ctx.measureText(texto).width > W * 0.88 && tam > 20) {
+      tam -= Math.max(2, Math.floor(tam * 0.04)); ctx.font = `700 ${tam}px ${fuente}`;
     }
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    const cx = W / 2, cy = H / 2 + tam * 0.06;
     // Letra hueca con borde punteado, como en los cuadernos de caligrafía.
     ctx.fillStyle = '#f1f3f5';
-    ctx.fillText(texto, lienzo.width / 2, lienzo.height / 2 + tam * 0.06);
-    ctx.setLineDash([10, 8]); ctx.lineWidth = 4; ctx.strokeStyle = '#adb5bd';
-    ctx.strokeText(texto, lienzo.width / 2, lienzo.height / 2 + tam * 0.06);
+    ctx.fillText(texto, cx, cy);
+    ctx.setLineDash([tam * 0.05, tam * 0.04]); ctx.lineWidth = Math.max(2, tam * 0.02); ctx.strokeStyle = '#adb5bd';
+    ctx.strokeText(texto, cx, cy);
     ctx.setLineDash([]);
-    // Línea base de escritura
-    ctx.strokeStyle = '#ffe8a3'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(30, lienzo.height * 0.82); ctx.lineTo(lienzo.width - 30, lienzo.height * 0.82); ctx.stroke();
+    // Líneas de cuaderno: base y guía superior
+    ctx.strokeStyle = '#ffe8a3'; ctx.lineWidth = Math.max(2, H * 0.006);
+    [cy + tam * 0.36, cy - tam * 0.36].forEach((y) => {
+      ctx.beginPath(); ctx.moveTo(W * 0.04, y); ctx.lineTo(W * 0.96, y); ctx.stroke();
+    });
   },
 
   pintar() {
     const { ctx, lienzo } = escribe;
-    ctx.clearRect(0, 0, lienzo.width, lienzo.height);
+    if (!ctx || !lienzo.width) return;
+    const W = lienzo.width, H = lienzo.height;
+    ctx.clearRect(0, 0, W, H);
     escribe.pintarGuia();
-    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 26;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(10, Math.min(W, H) * 0.07);
     escribe.trazos.forEach((t) => {
       ctx.strokeStyle = t.color; ctx.beginPath();
-      t.puntos.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-      if (t.puntos.length === 1) ctx.lineTo(t.puntos[0].x + 0.1, t.puntos[0].y);
+      t.puntos.forEach((p, i) => (i ? ctx.lineTo(p.x * W, p.y * H) : ctx.moveTo(p.x * W, p.y * H)));
+      if (t.puntos.length === 1) ctx.lineTo(t.puntos[0].x * W + 0.1, t.puntos[0].y * H);
       ctx.stroke();
     });
   },
@@ -485,7 +525,7 @@ document.querySelectorAll('.pestana').forEach((p) => {
     p.classList.add('activa');
     $(`#pantalla-${p.dataset.pantalla}`).classList.add('activa');
     if (p.dataset.pantalla === 'adivina') adivina.entrar();
-    if (p.dataset.pantalla === 'escribe') escribe.pintar();
+    if (p.dataset.pantalla === 'escribe') requestAnimationFrame(() => escribe.ajustarTamano());
   });
 });
 
@@ -532,3 +572,4 @@ caso.aplicar();
 voz.cargar();
 // Repintar la guía cuando la fuente web termine de cargar.
 document.fonts?.ready.then(() => escribe.pintar());
+window.addEventListener('orientationchange', () => setTimeout(() => escribe.ajustarTamano(), 300));

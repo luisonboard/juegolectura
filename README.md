@@ -13,13 +13,14 @@ una vez instalada.
 | --- | --- |
 | 🧩 **Formar** | Toca una consonante y una vocal. Se forma la sílaba, se lee en voz alta y aparece una palabra con emoji (MA → MAMÁ 👩). Botones para oírla normal, despacio o con la palabra completa. |
 | 🎧 **Adivina** | La app dice una sílaba y el niño elige entre tres tarjetas parecidas. Gana estrellas ⭐ y confeti al acertar. |
-| ✍️ **Escribe** | La sílaba aparece punteada como en un cuaderno de caligrafía y el niño la repasa con el dedo usando crayones de colores. |
+| ✍️ **Escribe** | La sílaba aparece punteada a pantalla completa, como en un cuaderno de caligrafía, y el niño la repasa con el dedo usando crayones de colores. |
 
 Detalles pensados para su edad:
 
 - Botones grandes, colores vivos, sonidos y animaciones en cada toque.
 - Botón **Aa** para alternar entre MAYÚSCULAS y minúsculas.
-- La **q** solo se combina con **e/i** (que, qui) y la **z** con **a/o/u**, como en español.
+- Debajo de cada letra aparece su nombre ("eme", "pe"); al tocar la casilla lo dice en voz alta, y el botón **🔤 Letras** deletrea: "eme, a, ma".
+- La **q** solo se combina con **e/i** (que, qui), como en español.
 - Las estrellas se guardan en el dispositivo.
 
 ## Voz
@@ -29,8 +30,11 @@ Prefiere automáticamente las voces femeninas y de mejor calidad (Paulina, Móni
 Sabina, las "mejoradas" de iOS, etc.) y evita las masculinas graves. Con el botón
 **🎤** de la cabecera se puede escuchar y elegir otra voz; la elección se guarda.
 
-Las sílabas se envían al lector con la vocal acentuada ("pá", "nú"): así Safari no
-las confunde con abreviaturas ("pa" → "por autorización") y pronuncia la vocal completa.
+Las sílabas se envían al lector con la vocal acentuada y una "h" muda al final
+("páh", "sáh", "núh"): así Safari no las confunde con abreviaturas ("pa" → "por
+autorización", "sa" → "sábado") y pronuncia la vocal completa. La "y" se escribe
+con "ll" para la voz ("lláh"), porque la "y" suelta la lee como "i griega". Todo
+esto está en `pronunciar()` dentro de `data.js`, donde se pueden añadir excepciones.
 
 Si el dispositivo no tiene ninguna voz en español instalada, conviene añadirla:
 

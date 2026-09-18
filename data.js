@@ -20,10 +20,10 @@ export const CONSONANTES = [
   { letra: 'j', nombre: 'jota', color: '#a9e34b' },
   { letra: 'r', nombre: 'erre', color: '#3bc9db' },
   { letra: 'v', nombre: 'uve', color: '#9775fa' },
-  { letra: 'z', nombre: 'zeta', color: '#e599f7', soloCon: ['a', 'o', 'u'] },
+  { letra: 'z', nombre: 'zeta', color: '#e599f7' },
   { letra: 'h', nombre: 'hache', color: '#63e6be' },
   { letra: 'ñ', nombre: 'eñe', color: '#ffe066' },
-  { letra: 'y', nombre: 'ye', color: '#74c0fc' },
+  { letra: 'y', nombre: 'i griega', color: '#74c0fc' },
   { letra: 'll', nombre: 'elle', color: '#b197fc' },
   { letra: 'ch', nombre: 'che', color: '#ff922b' },
   { letra: 'q', nombre: 'cu', color: '#20c997', soloCon: ['e', 'i'] },
@@ -37,12 +37,24 @@ export function formarSilaba(consonante, vocal) {
 }
 
 // Texto que se envía al sintetizador de voz para que lea la sílaba como tal.
-// Con la vocal acentuada ("pá", "nú") los lectores de voz (sobre todo en iPhone)
-// no la confunden con una abreviatura ("pa" → "por autorización") ni la cortan.
+// Los lectores de voz (sobre todo en iPhone) confunden las sílabas sueltas con
+// abreviaturas: "pa" → "por autorización", "sá" → "sábado". Para evitarlo se
+// acentúa la vocal (suena completa) y se añade una "h" final, que en español es
+// muda pero impide que el texto coincida con alguna abreviatura.
 const TILDES = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
+// Casos especiales: la "y" suelta se lee como "i griega", así que se escribe con
+// "ll", que suena igual en las voces en español (yeísmo).
+const EXCEPCIONES = { ya: 'lláh', ye: 'lléh', yi: 'llíh', yo: 'yo', yu: 'llúh' };
 export function pronunciar(silaba) {
+  if (EXCEPCIONES[silaba]) return EXCEPCIONES[silaba];
   const ultima = silaba[silaba.length - 1];
-  return TILDES[ultima] ? silaba.slice(0, -1) + TILDES[ultima] : silaba;
+  return TILDES[ultima] ? silaba.slice(0, -1) + TILDES[ultima] + 'h' : silaba;
+}
+
+// Nombre de la letra tal como debe leerlo la voz (los nombres de dos letras
+// también se protegen para que no se lean como abreviaturas).
+export function pronunciarNombre(nombre) {
+  return nombre.length <= 2 ? pronunciar(nombre) : nombre;
 }
 
 // Palabra de ejemplo + emoji para cada sílaba (clave = sílaba escrita).

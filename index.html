@@ -42,9 +42,15 @@
     <section class="pantalla activa" id="pantalla-formar">
       <div class="tarjeta" id="tarjeta">
         <div class="ecuacion">
-          <div class="ranura" id="ranura-consonante" data-vacia="true"><span class="letra"></span></div>
+          <div class="ranura" id="ranura-consonante" data-vacia="true" role="button" aria-label="Escuchar el nombre de la letra">
+            <span class="letra"></span>
+            <small class="nombre" id="nombre-consonante"></small>
+          </div>
           <span class="signo">+</span>
-          <div class="ranura ranura-vocal" id="ranura-vocal" data-vacia="true"><span class="letra"></span></div>
+          <div class="ranura ranura-vocal" id="ranura-vocal" data-vacia="true" role="button" aria-label="Escuchar la vocal">
+            <span class="letra"></span>
+            <small class="nombre" id="nombre-vocal"></small>
+          </div>
           <span class="signo">=</span>
           <div class="resultado" id="resultado"><span class="letra">?</span></div>
         </div>
@@ -55,6 +61,7 @@
         <div class="botones-tarjeta" id="botones-tarjeta" hidden>
           <button class="boton boton-sonido" id="btn-oir" type="button">🔊 Escuchar</button>
           <button class="boton boton-lento" id="btn-lento" type="button">🐢 Despacio</button>
+          <button class="boton boton-letras" id="btn-letras" type="button">🔤 Letras</button>
           <button class="boton boton-palabra" id="btn-palabra" type="button">🗣️ Palabra</button>
         </div>
       </div>
@@ -78,23 +85,21 @@
 
     <!-- ===== PANTALLA: ESCRIBE ===== -->
     <section class="pantalla" id="pantalla-escribe">
-      <div class="tarjeta tarjeta-escribe">
-        <div class="barra-escribe">
-          <button class="boton" id="btn-oir-trazo" type="button">🔊 Oír</button>
-          <button class="boton" id="btn-otra" type="button">🎲 Otra</button>
-          <button class="boton" id="btn-borrar" type="button">🧽 Borrar</button>
-        </div>
-        <div class="lienzo-envoltura">
-          <canvas id="lienzo" width="600" height="360"></canvas>
-        </div>
-        <div class="crayones" id="crayones">
-          <button class="crayon activo" data-color="#e8590c" style="--c:#e8590c" type="button" aria-label="Naranja"></button>
-          <button class="crayon" data-color="#2f9e44" style="--c:#2f9e44" type="button" aria-label="Verde"></button>
-          <button class="crayon" data-color="#1971c2" style="--c:#1971c2" type="button" aria-label="Azul"></button>
-          <button class="crayon" data-color="#c2255c" style="--c:#c2255c" type="button" aria-label="Rosa"></button>
-          <button class="crayon" data-color="#5f3dc4" style="--c:#5f3dc4" type="button" aria-label="Morado"></button>
-        </div>
-        <p class="pista">Repasa la sílaba con tu dedo ✍️</p>
+      <div class="barra-escribe">
+        <button class="boton" id="btn-oir-trazo" type="button">🔊 Oír</button>
+        <button class="boton" id="btn-otra" type="button">🎲 Otra</button>
+        <button class="boton boton-palabra" id="btn-borrar" type="button">🧽 Borrar</button>
+      </div>
+      <div class="lienzo-envoltura" id="lienzo-envoltura">
+        <canvas id="lienzo"></canvas>
+      </div>
+      <div class="crayones" id="crayones">
+        <button class="crayon activo" data-color="#e8590c" style="--c:#e8590c" type="button" aria-label="Naranja"></button>
+        <button class="crayon" data-color="#2f9e44" style="--c:#2f9e44" type="button" aria-label="Verde"></button>
+        <button class="crayon" data-color="#1971c2" style="--c:#1971c2" type="button" aria-label="Azul"></button>
+        <button class="crayon" data-color="#c2255c" style="--c:#c2255c" type="button" aria-label="Rosa"></button>
+        <button class="crayon" data-color="#5f3dc4" style="--c:#5f3dc4" type="button" aria-label="Morado"></button>
+        <button class="crayon" data-color="#2d3436" style="--c:#2d3436" type="button" aria-label="Negro"></button>
       </div>
     </section>
   </main>
