@@ -59,18 +59,25 @@ Si el dispositivo no tiene ninguna voz en español instalada, conviene añadirla
 ## Probar en local
 
 ```bash
-npx serve .
+npx serve public
 # o
-python3 -m http.server 8080
+cd public && python3 -m http.server 8080
 ```
 
 Abre `http://localhost:8080`. El service worker se registra en `localhost` sin HTTPS.
 
 ## Publicar e instalar como app
 
-La PWA necesita HTTPS para poder instalarse. El repositorio incluye un workflow
-(`.github/workflows/pages.yml`) que publica la carpeta raíz en **GitHub Pages** en
-cada push a `main`. Solo hay que activar Pages en *Settings → Pages → Source: GitHub Actions*.
+La PWA necesita HTTPS para poder instalarse. Toda la app vive en `public/`, que es
+lo único que se publica: así el `.git`, los scripts y el README no acaban en el sitio.
+
+- **Cloudflare Workers**: `wrangler.jsonc` sube `public/` como assets estáticos (sin
+  script de Worker). El `name` debe coincidir con el nombre del Worker en Cloudflare.
+  El comando de despliegue puede ser `npx wrangler deploy` (publica directamente) o
+  `npx wrangler versions upload` (sube una versión que luego se promueve a mano).
+- **GitHub Pages**: el workflow `.github/workflows/pages.yml` publica `public/` en
+  cada push a `main`. Solo hay que activar Pages en *Settings → Pages → Source:
+  GitHub Actions*.
 
 Luego, desde el celular o tablet:
 
@@ -80,13 +87,17 @@ Luego, desde el celular o tablet:
 ## Estructura
 
 ```
-index.html            Pantallas y navegación
-styles.css            Estilos (tema colorido, responsive, tablet)
-app.js                Lógica: voz, sonidos, juego, lienzo, PWA
-data.js               Consonantes, vocales, palabras de ejemplo y palabras partidas en sílabas
-sw.js                 Service worker (caché para uso sin conexión)
-manifest.webmanifest  Manifiesto de la PWA
-icons/                Íconos (generados con scripts/make-icons.js)
+public/                      Lo único que se publica
+  index.html                 Pantallas y navegación
+  styles.css                 Estilos (tema colorido, responsive, tablet)
+  app.js                     Lógica: voz, sonidos, juego, lienzo, PWA
+  data.js                    Consonantes, vocales, palabras de ejemplo y palabras partidas en sílabas
+  sw.js                      Service worker (caché para uso sin conexión)
+  manifest.webmanifest       Manifiesto de la PWA
+  icons/                     Íconos (generados con scripts/make-icons.js)
+wrangler.jsonc               Despliegue en Cloudflare Workers
+.github/workflows/pages.yml  Despliegue en GitHub Pages
+scripts/make-icons.js        Generador de íconos
 ```
 
 Para regenerar los íconos: `node scripts/make-icons.js`.

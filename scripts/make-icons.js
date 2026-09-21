@@ -77,7 +77,7 @@ function dibujar(tam, maskable) {
   return png(tam, tam, px);
 }
 
-const salida = path.join(__dirname, '..', 'icons');
+const salida = path.join(__dirname, '..', 'public', 'icons');
 fs.writeFileSync(path.join(salida, 'icon-192.png'), dibujar(192, false));
 fs.writeFileSync(path.join(salida, 'icon-512.png'), dibujar(512, false));
 fs.writeFileSync(path.join(salida, 'icon-maskable-512.png'), dibujar(512, true));

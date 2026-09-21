@@ -1,0 +1,19 @@
+{
+  // Despliegue en Cloudflare Workers.
+  //
+  // La app es estática (HTML, CSS y JS sin paso de build), así que no hay
+  // script de Worker: solo se suben los archivos de "public/" como assets.
+  // Esa carpeta existe justamente para que se publique la app y nada más: si
+  // el directorio fuera la raíz del repositorio, Wrangler subiría también
+  // ".git/", "scripts/" y el README al sitio público.
+  //
+  // "name" tiene que coincidir con el nombre del Worker en Cloudflare.
+  "name": "juegolectura",
+  "compatibility_date": "2026-09-21",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./public"
+  }
+}
