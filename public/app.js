@@ -769,7 +769,9 @@ const actualizacion = {
         actualizacion.registro = await navigator.serviceWorker.register('./sw.js');
         actualizacion.preguntarVersion();
         actualizacion.registro.addEventListener('updatefound', () => actualizacion.vigilar());
-        if (actualizacion.registro.waiting) actualizacion.avisarNueva();
+        // Si quedó una versión esperando, este es el momento seguro de aplicarla:
+        // la app acaba de abrir, no hay ninguna partida a medias.
+        if (actualizacion.registro.waiting) actualizacion.aplicar();
       } catch (e) {
         console.warn('SW no registrado', e);
         actualizacion.pintar('No se pudo preparar el uso sin internet.');
@@ -778,9 +780,16 @@ const actualizacion = {
     if (document.readyState === 'complete') registrar();
     else window.addEventListener('load', registrar);
 
-    // La versión nueva ya manda: se recarga solo si la persona la pidió.
+    // La versión nueva ya manda: se recarga solo si la persona la pidió, y una
+    // sola vez, para que un fallo no deje la app recargándose en bucle.
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!actualizacion.pedida || actualizacion.recargando) return;
+      if (actualizacion.recargando) return;
+      if (!actualizacion.pedida) { actualizacion.avisarNueva(); return; }
+      if (sessionStorage.getItem('silabas.recargada') === '1') {
+        actualizacion.pintar('Versión nueva lista. Cierra y vuelve a abrir la app.');
+        return;
+      }
+      sessionStorage.setItem('silabas.recargada', '1');
       actualizacion.recargando = true;
       location.reload();
     });

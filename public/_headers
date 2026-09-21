@@ -1,0 +1,9 @@
+# El navegador debe preguntar siempre por estos dos antes de usar su copia: son
+# los que anuncian que hay una versión nueva. Sin esto, una caché intermedia
+# puede dejar la app pegada en una versión vieja durante horas.
+/sw.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/
+  Cache-Control: no-cache

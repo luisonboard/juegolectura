@@ -47,15 +47,21 @@ lista para repasarla en **Escribe**.
 
 ## Actualizar la app
 
-Al ser una PWA, la versión instalada se guarda en el dispositivo. El service
-worker nuevo **no entra solo**: se queda esperando para no recargar la app en
-mitad de una partida. En **⚙️ Ajustes → Versión de la app** se ve la versión
-instalada y con **🔄 Buscar actualización** se comprueba si hay una nueva; si la
-hay, se aplica y la app se reinicia sola. Si una versión nueva se instala en
-segundo plano, aparece un aviso sugiriendo entrar a ⚙️.
+Al ser una PWA, la app se guarda en el dispositivo para funcionar sin internet.
+El service worker usa **primero la red y la caché como respaldo**: con conexión,
+recargar el navegador siempre trae la última versión; sin conexión, se sirve lo
+guardado. (Hasta la v6 era al revés —primero la caché— y por eso recargar no
+mostraba nunca los cambios: había que abrir una ventana privada.)
+
+Además, en **⚙️ Ajustes → Versión de la app** se ve la versión instalada y con
+**🔄 Buscar actualización** se comprueba si hay una nueva; si la hay, se aplica y
+la app se reinicia sola. Si una versión nueva se instala en segundo plano,
+aparece un aviso, pero la app no se recarga a mitad de partida por su cuenta.
 
 Al publicar cambios hay que subir `VERSION` en `sw.js` (`mis-silabas-vN`): es lo
-que el navegador compara para saber que hay algo nuevo.
+que el navegador compara para saber que hay algo nuevo. El archivo `_headers`
+marca `sw.js` e `index.html` como `no-cache` para que ninguna caché intermedia
+retrase el aviso.
 
 ## Voz
 
@@ -117,6 +123,7 @@ public/                      Lo único que se publica
   sw.js                      Service worker (caché para uso sin conexión)
   manifest.webmanifest       Manifiesto de la PWA
   icons/                     Íconos (generados con scripts/make-icons.js)
+public/_headers              Cabeceras (evita cachés pegadas en sw.js e index.html)
 wrangler.jsonc               Despliegue en Cloudflare Workers
 .github/workflows/pages.yml  Despliegue en GitHub Pages
 scripts/make-icons.js        Generador de íconos

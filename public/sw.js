@@ -1,5 +1,11 @@
-// Service worker: guarda la app completa para que funcione sin internet.
-const VERSION = 'mis-silabas-v6';
+// Service worker: guarda la app para que funcione sin internet, pero sin dejar
+// que una versión vieja se quede pegada.
+//
+// La estrategia es "primero la red, la caché de respaldo": con internet, cada
+// recarga trae lo último; sin internet, se sirve lo guardado. La versión
+// anterior hacía lo contrario (primero la caché) y por eso recargar el
+// navegador nunca mostraba los cambios.
+const VERSION = 'mis-silabas-v7';
 const ARCHIVOS = [
   './',
   './index.html',
@@ -14,10 +20,15 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener('install', (e) => {
-  // No se llama a skipWaiting() aquí: la versión nueva se queda esperando hasta
-  // que la persona toca "Actualizar" en los ajustes. Así la app no se recarga
-  // sola en mitad de una partida.
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)));
+  e.waitUntil(
+    caches.open(VERSION)
+      // "reload" evita que el precargado se llene desde la caché del navegador,
+      // que es justo la que puede tener los archivos viejos.
+      .then((c) => c.addAll(ARCHIVOS.map((u) => new Request(u, { cache: 'reload' }))))
+      // La versión nueva entra sin esperar a que se cierren las pestañas: si no,
+      // se queda bloqueada detrás de la vieja y la app nunca se actualiza.
+      .then(() => self.skipWaiting())
+  );
 });
 
 // Mensajes desde la página: consultar la versión instalada y aplicar la nueva.
@@ -34,12 +45,20 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+// Guarda una copia en la caché de la versión actual.
+async function guardar(request, respuesta) {
+  if (!respuesta || !respuesta.ok) return;
+  const c = await caches.open(VERSION);
+  await c.put(request, respuesta.clone());
+}
+
 self.addEventListener('fetch', (e) => {
   const { request } = e;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
 
-  // Fuentes de Google: se sirven de caché y se actualizan en segundo plano.
+  // Fuentes de Google: de caché y se actualizan en segundo plano (cambian poco
+  // y así la app abre rápido).
   if (url.origin.includes('fonts.googleapis.com') || url.origin.includes('fonts.gstatic.com')) {
     e.respondWith(
       caches.open(VERSION + '-fuentes').then(async (c) => {
@@ -51,17 +70,23 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // Archivos de la app: primero caché, si no está se busca en la red y se guarda.
-  e.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((enCache) => {
+  if (url.origin !== self.location.origin) return;
+
+  // Archivos de la app: primero la red (así una recarga siempre trae lo nuevo)
+  // y, si no hay conexión, lo que haya guardado.
+  e.respondWith((async () => {
+    try {
+      const red = await fetch(request);
+      await guardar(request, red);
+      return red;
+    } catch (e) {
+      const enCache = await caches.match(request, { ignoreSearch: true });
       if (enCache) return enCache;
-      return fetch(request).then((r) => {
-        if (r.ok && url.origin === self.location.origin) {
-          const copia = r.clone();
-          caches.open(VERSION).then((c) => c.put(request, copia));
-        }
-        return r;
-      }).catch(() => (request.mode === 'navigate' ? caches.match('./index.html') : undefined));
-    })
-  );
+      if (request.mode === 'navigate') {
+        const inicio = await caches.match('./index.html');
+        if (inicio) return inicio;
+      }
+      throw e;
+    }
+  })());
 });
