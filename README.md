@@ -13,7 +13,7 @@ una vez instalada.
 | Pestaña | Qué hace |
 | --- | --- |
 | 🧩 **Formar** | Toca una consonante y una vocal. Se forma la sílaba, se lee en voz alta y aparece una palabra con emoji (MA → MAMÁ 👩). Botones para oírla normal, despacio o con la palabra completa. |
-| 📝 **Palabras** | Aparece un dibujo y un hueco por sílaba: el niño arma la palabra tocando las sílabas en orden (🦀 → CAN + GRE + JO). El banco trae sílabas de sobra como distractores. |
+| 📝 **Palabras** | Aparece un dibujo y un hueco por sílaba: el niño arma la palabra tocando las sílabas en orden (🐱 → GA + TO). El banco trae sílabas de sobra como distractores. Un interruptor decide si entran las sílabas que terminan en consonante. |
 | 🎧 **Adivina** | La app dice una sílaba y el niño elige entre tres tarjetas parecidas. Gana estrellas ⭐ y confeti al acertar. |
 | ✍️ **Escribe** | La sílaba (o una palabra corta) aparece punteada a pantalla completa, como en un cuaderno de caligrafía, y el niño la repasa con el dedo usando crayones de colores. |
 
@@ -25,15 +25,37 @@ Detalles pensados para su edad:
 - La **q** solo se combina con **e/i** (que, qui), como en español.
 - Las estrellas se guardan en el dispositivo.
 
-En **Palabras** el banco arranca con palabras de una y dos sílabas y va soltando
-las de tres y cuatro conforme el niño acierta. Ahí entran las **sílabas cerradas
-o inversas**, las que terminan en consonante (SOL, PAN, CAR-TA, PAS-TEL, ÁR-BOL,
-MON-TA-ÑA), que es el paso siguiente a consonante + vocal. Cada sílaba lleva el
-color de su consonante inicial, así la misma letra siempre se reconoce igual.
-Los botones leen la palabra entera (**🔊 Escuchar**), la deletrean sílaba a
-sílaba (**🐢 Sílabas**), resaltan y dicen la que toca ahora (**💡 Pista**) o
-devuelven la última al banco (**⬅️ Quitar**). Al completarla, esa palabra queda
+En **Palabras** hay 144 palabras con dibujo, y el banco arranca con las de una y
+dos sílabas: va soltando las de tres y cuatro conforme el niño acierta.
+
+El interruptor **"Sílabas que terminan en consonante"** decide el nivel de
+dificultad y se recuerda entre sesiones:
+
+- **Apagado** (por defecto): solo palabras cuyas sílabas acaban en vocal —
+  101 palabras, 69 de ellas de una o dos sílabas (GA-TO, CA-SA, RUE-DA, HUE-VO).
+- **Encendido**: entran además las **sílabas cerradas o inversas**, las que
+  terminan en consonante (SOL, PAN, CAR-TA, PAS-TEL, ÁR-BOL, MON-TA-ÑA), que son
+  el paso siguiente a consonante + vocal.
+
+Cada sílaba lleva el color de su consonante inicial, así la misma letra siempre
+se reconoce igual. Los botones leen la palabra entera (**🔊 Escuchar**), la
+deletrean sílaba a sílaba (**🐢 Sílabas**), resaltan y dicen la que toca ahora
+(**💡 Pista**) o devuelven la última al banco (**⬅️ Quitar**). Al completarla la
+palabra **se queda en pantalla** —no pasa sola a la siguiente— para poder
+escucharla las veces que haga falta; se avanza con **➡️ Siguiente**. Además queda
 lista para repasarla en **Escribe**.
+
+## Actualizar la app
+
+Al ser una PWA, la versión instalada se guarda en el dispositivo. El service
+worker nuevo **no entra solo**: se queda esperando para no recargar la app en
+mitad de una partida. En **⚙️ Ajustes → Versión de la app** se ve la versión
+instalada y con **🔄 Buscar actualización** se comprueba si hay una nueva; si la
+hay, se aplica y la app se reinicia sola. Si una versión nueva se instala en
+segundo plano, aparece un aviso sugiriendo entrar a ⚙️.
+
+Al publicar cambios hay que subir `VERSION` en `sw.js` (`mis-silabas-vN`): es lo
+que el navegador compara para saber que hay algo nuevo.
 
 ## Voz
 

@@ -1,6 +1,6 @@
 import {
   VOCALES, CONSONANTES, PALABRAS, PALABRAS_SILABAS, FELICITACIONES,
-  formarSilaba, pronunciar, pronunciarNombre, unirSilabas, colorSilaba,
+  formarSilaba, pronunciar, pronunciarNombre, unirSilabas, colorSilaba, tieneSilabaCerrada,
 } from './data.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -97,7 +97,9 @@ const ajustes = {
     });
   },
   iniciar() {
-    $('#btn-ajustes').addEventListener('click', () => { sonidos.pop(); voz.cargar(); $('#modal-ajustes').hidden = false; });
+    $('#btn-ajustes').addEventListener('click', () => {
+      sonidos.pop(); voz.cargar(); actualizacion.preguntarVersion(); $('#modal-ajustes').hidden = false;
+    });
     $('#btn-cerrar-ajustes').addEventListener('click', () => { sonidos.pop(); $('#modal-ajustes').hidden = true; });
     $('#modal-ajustes').addEventListener('click', (e) => { if (e.target.id === 'modal-ajustes') $('#modal-ajustes').hidden = true; });
     $('#voz-select').addEventListener('change', (e) => { voz.elegir(e.target.value); voz.hablar('Hola, soy tu nueva voz. ¡Vamos a leer!', { rate: 0.95 }); });
@@ -432,6 +434,9 @@ const palabras = {
   aciertos: 0,
   bloqueado: false,
   iniciado: false,
+  // Las sílabas terminadas en consonante solo entran si se activa el
+  // interruptor; se empieza con las abiertas, que son más fáciles.
+  cerradas: localStorage.getItem('silabas.cerradas') === '1',
 
   iniciar() {
     $('#btn-oir-palabra').addEventListener('click', () => palabras.decir());
@@ -439,6 +444,20 @@ const palabras = {
     $('#btn-pista').addEventListener('click', () => palabras.pista());
     $('#btn-quitar').addEventListener('click', () => { sonidos.pop(); palabras.quitar(); });
     $('#btn-otra-palabra').addEventListener('click', () => { sonidos.pop(); palabras.nueva(); });
+    $('#btn-siguiente').addEventListener('click', () => { sonidos.pop(); palabras.nueva(); });
+    const chk = $('#chk-cerradas');
+    chk.checked = palabras.cerradas;
+    chk.addEventListener('change', () => {
+      sonidos.pop();
+      palabras.cerradas = chk.checked;
+      localStorage.setItem('silabas.cerradas', chk.checked ? '1' : '0');
+      palabras.nueva();
+      // Se explica en la pista y no con un aviso flotante, que taparía el
+      // propio interruptor.
+      $('#pista-palabras').textContent = chk.checked
+        ? 'Ahora también salen sílabas como SOL o CAR 🎉'
+        : 'Solo sílabas que acaban en vocal 🎈';
+    });
   },
 
   entrar() { if (!palabras.iniciado) { palabras.iniciado = true; palabras.nueva(); } },
@@ -446,9 +465,13 @@ const palabras = {
   texto() { return palabras.actual ? unirSilabas(palabras.actual.silabas) : ''; },
 
   // El banco empieza con palabras cortas y se abre a las largas al ir acertando.
+  // El interruptor decide además si entran las palabras con sílabas cerradas.
   disponibles() {
     const maximo = palabras.aciertos < 4 ? 2 : palabras.aciertos < 10 ? 3 : 9;
-    return PALABRAS_SILABAS.filter((p) => p.silabas.length <= maximo);
+    const porLargo = PALABRAS_SILABAS.filter((p) => p.silabas.length <= maximo);
+    if (palabras.cerradas) return porLargo;
+    const abiertas = porLargo.filter((p) => !tieneSilabaCerrada(p));
+    return abiertas.length ? abiertas : porLargo;
   },
 
   nueva() {
@@ -486,6 +509,7 @@ const palabras = {
       banco.appendChild(b);
     });
 
+    $('#btn-siguiente').hidden = true;
     $('#pista-palabras').textContent = 'Toca las sílabas en orden 👇';
     voz.hablar(`${palabras.texto()}. Arma la palabra`, { rate: 0.85 });
   },
@@ -533,11 +557,12 @@ const palabras = {
     $('#mascota').classList.add('saltando');
     setTimeout(() => $('#mascota').classList.remove('saltando'), 700);
     const palabra = palabras.texto();
-    $('#pista-palabras').textContent = `¡${caso.mostrar(palabra)}! 🎉`;
+    $('#pista-palabras').textContent = `¡${caso.mostrar(palabra)}! 🎉 Toca ➡️ Siguiente`;
+    // La palabra se queda en pantalla: se pasa a otra cuando la persona quiere.
+    $('#btn-siguiente').hidden = false;
     // La palabra recién armada queda lista para repasarla en "Escribe".
     escribe.fijar(palabra, 'palabra');
     voz.hablar(`${azar(FELICITACIONES)} ${palabra}`, { rate: 0.9 });
-    setTimeout(() => palabras.nueva(), 2800);
   },
 
   // Resalta y dice la sílaba que toca ahora.
@@ -617,7 +642,8 @@ const escribe = {
   // palabra corta (de una o dos sílabas), que ya cabe en el lienzo.
   otro() {
     if (Math.random() < 0.3) {
-      const cortas = PALABRAS_SILABAS.filter((p) => p.silabas.length <= 2);
+      const cortas = PALABRAS_SILABAS.filter((p) => p.silabas.length <= 2
+        && (palabras.cerradas || !tieneSilabaCerrada(p)));
       escribe.fijar(unirSilabas(azar(cortas).silabas), 'palabra');
     } else {
       escribe.fijar(azar(TODAS_LAS_SILABAS).silaba, 'silaba');
@@ -721,13 +747,104 @@ $('#mascota').addEventListener('click', () => {
 });
 
 /* =========================================================
-   PWA: service worker e instalación
-   ========================================================= */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('SW no registrado', e));
-  });
-}
+   PWA: service worker, versión e instalación
+   =========================================================
+   El service worker nuevo se queda esperando en vez de entrar solo, para no
+   recargar la app en mitad de una partida. Desde ⚙️ Ajustes se busca si hay
+   versión nueva y, si la hay, se aplica y la app se reinicia. */
+const actualizacion = {
+  registro: null,
+  pedida: false,      // la persona tocó "Buscar actualización"
+  recargando: false,
+  version: null,
+
+  iniciar() {
+    $('#btn-buscar-version').addEventListener('click', () => actualizacion.buscar());
+    if (!('serviceWorker' in navigator)) {
+      actualizacion.pintar('Este navegador no guarda la app para usarla sin internet.');
+      return;
+    }
+    const registrar = async () => {
+      try {
+        actualizacion.registro = await navigator.serviceWorker.register('./sw.js');
+        actualizacion.preguntarVersion();
+        actualizacion.registro.addEventListener('updatefound', () => actualizacion.vigilar());
+        if (actualizacion.registro.waiting) actualizacion.avisarNueva();
+      } catch (e) {
+        console.warn('SW no registrado', e);
+        actualizacion.pintar('No se pudo preparar el uso sin internet.');
+      }
+    };
+    if (document.readyState === 'complete') registrar();
+    else window.addEventListener('load', registrar);
+
+    // La versión nueva ya manda: se recarga solo si la persona la pidió.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!actualizacion.pedida || actualizacion.recargando) return;
+      actualizacion.recargando = true;
+      location.reload();
+    });
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.tipo === 'version') { actualizacion.version = e.data.version; actualizacion.pintar(); }
+    });
+  },
+
+  preguntarVersion() {
+    const c = navigator.serviceWorker.controller;
+    if (c) c.postMessage('version');
+    else actualizacion.pintar('Se guardará para usarla sin internet la próxima vez que la abras.');
+  },
+
+  pintar(texto) {
+    const el = $('#version-texto'); if (!el) return;
+    el.textContent = texto || (actualizacion.version ? `Versión instalada: ${actualizacion.version}` : 'Versión instalada: —');
+  },
+
+  // Una versión nueva se instaló sola en segundo plano: se avisa, sin recargar.
+  vigilar() {
+    const nuevo = actualizacion.registro && actualizacion.registro.installing;
+    if (!nuevo) return;
+    nuevo.addEventListener('statechange', () => {
+      if (nuevo.state === 'installed' && navigator.serviceWorker.controller) actualizacion.avisarNueva();
+    });
+  },
+
+  avisarNueva() {
+    if (actualizacion.pedida) return;
+    actualizacion.pintar('¡Hay una versión nueva lista! Toca "Buscar actualización".');
+    aviso('Hay una versión nueva ✨ Míralo en ⚙️');
+  },
+
+  async buscar() {
+    sonidos.pop();
+    const reg = actualizacion.registro;
+    if (!reg) { aviso('Aún no está lista para guardar versiones'); return; }
+    actualizacion.pintar('Buscando novedades… 🔄');
+    try {
+      await reg.update();
+    } catch (e) {
+      actualizacion.pintar();
+      aviso('No se pudo comprobar. ¿Hay internet? 📶');
+      return;
+    }
+    if (reg.waiting || reg.installing) actualizacion.aplicar();
+    else { actualizacion.pintar(); aviso('Ya tienes la última versión ✅'); }
+  },
+
+  // Le dice a la versión nueva que tome el mando; al hacerlo, la app se recarga.
+  aplicar() {
+    const reg = actualizacion.registro;
+    actualizacion.pedida = true;
+    actualizacion.pintar('¡Versión nueva! Actualizando… 🎉');
+    aviso('Actualizando la app… 🎉');
+    if (reg.waiting) { reg.waiting.postMessage('actualizar'); return; }
+    const instalando = reg.installing;
+    if (!instalando) return;
+    instalando.addEventListener('statechange', () => {
+      if (instalando.state === 'installed') instalando.postMessage('actualizar');
+    });
+  },
+};
 
 let eventoInstalar = null;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -753,6 +870,7 @@ palabras.iniciar();
 adivina.iniciar();
 escribe.iniciar();
 ajustes.iniciar();
+actualizacion.iniciar();
 caso.aplicar();
 voz.cargar();
 // Repintar la guía cuando la fuente web termine de cargar.

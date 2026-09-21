@@ -1,5 +1,5 @@
 // Service worker: guarda la app completa para que funcione sin internet.
-const VERSION = 'mis-silabas-v5';
+const VERSION = 'mis-silabas-v6';
 const ARCHIVOS = [
   './',
   './index.html',
@@ -14,7 +14,16 @@ const ARCHIVOS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  // No se llama a skipWaiting() aquí: la versión nueva se queda esperando hasta
+  // que la persona toca "Actualizar" en los ajustes. Así la app no se recarga
+  // sola en mitad de una partida.
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)));
+});
+
+// Mensajes desde la página: consultar la versión instalada y aplicar la nueva.
+self.addEventListener('message', (e) => {
+  if (e.data === 'version') e.source?.postMessage({ tipo: 'version', version: VERSION });
+  if (e.data === 'actualizar') self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
