@@ -1,4 +1,7 @@
-import { VOCALES, CONSONANTES, PALABRAS, FELICITACIONES, formarSilaba, pronunciar, pronunciarNombre } from './data.js';
+import {
+  VOCALES, CONSONANTES, PALABRAS, PALABRAS_SILABAS, FELICITACIONES,
+  formarSilaba, pronunciar, pronunciarNombre, unirSilabas, colorSilaba,
+} from './data.js';
 
 const $ = (sel) => document.querySelector(sel);
 const azar = (lista) => lista[Math.floor(Math.random() * lista.length)];
@@ -299,7 +302,7 @@ const formar = {
     $('#botones-tarjeta').hidden = false;
     $('#pista').textContent = '¡Escucha! Prueba con otra vocal 🎉';
     confeti(18);
-    escribe.fijarSilaba(silaba);
+    escribe.fijar(silaba, 'silaba');
     if (anunciarLetra) voz.hablar(`${pronunciarNombre(formar.consonante.nombre)}. ${pronunciar(silaba)}`, { rate: 0.85 });
     else formar.decir(0.85);
   },
@@ -417,10 +420,156 @@ const adivina = {
 };
 
 /* =========================================================
+   PANTALLA: PALABRAS (construir una palabra con sus sílabas)
+   =========================================================
+   Se ve el dibujo de la palabra y un hueco por sílaba. El niño toca las
+   sílabas del banco en orden; hay sílabas de sobra como distractores y muchas
+   terminan en consonante ("sol", "car", "pas"), que es el paso siguiente a
+   consonante + vocal. */
+const palabras = {
+  actual: null,     // { silabas, emoji } de PALABRAS_SILABAS
+  puestas: [],      // fichas ya colocadas, en orden
+  aciertos: 0,
+  bloqueado: false,
+  iniciado: false,
+
+  iniciar() {
+    $('#btn-oir-palabra').addEventListener('click', () => palabras.decir());
+    $('#btn-silabear').addEventListener('click', () => palabras.decirPorSilabas());
+    $('#btn-pista').addEventListener('click', () => palabras.pista());
+    $('#btn-quitar').addEventListener('click', () => { sonidos.pop(); palabras.quitar(); });
+    $('#btn-otra-palabra').addEventListener('click', () => { sonidos.pop(); palabras.nueva(); });
+  },
+
+  entrar() { if (!palabras.iniciado) { palabras.iniciado = true; palabras.nueva(); } },
+
+  texto() { return palabras.actual ? unirSilabas(palabras.actual.silabas) : ''; },
+
+  // El banco empieza con palabras cortas y se abre a las largas al ir acertando.
+  disponibles() {
+    const maximo = palabras.aciertos < 4 ? 2 : palabras.aciertos < 10 ? 3 : 9;
+    return PALABRAS_SILABAS.filter((p) => p.silabas.length <= maximo);
+  },
+
+  nueva() {
+    palabras.bloqueado = false;
+    palabras.puestas = [];
+    const posibles = palabras.disponibles();
+    const sinRepetir = posibles.filter((p) => p !== palabras.actual);
+    palabras.actual = azar(sinRepetir.length ? sinRepetir : posibles);
+    const { silabas, emoji } = palabras.actual;
+
+    $('#palabra-dibujo').textContent = emoji;
+
+    // Un hueco vacío por cada sílaba.
+    const huecos = $('#huecos');
+    huecos.innerHTML = '';
+    huecos.classList.remove('completa');
+    silabas.forEach(() => {
+      const h = document.createElement('div');
+      h.className = 'hueco'; h.dataset.vacio = 'true';
+      h.innerHTML = '<span class="letra"></span>';
+      huecos.appendChild(h);
+    });
+
+    // Fichas: las sílabas de la palabra + algunas sílabas de otras palabras.
+    const otras = [...new Set(posibles.flatMap((p) => p.silabas))].filter((s) => !silabas.includes(s));
+    const sobras = mezclar(otras).slice(0, silabas.length >= 4 ? 2 : 3);
+    const banco = $('#banco-silabas');
+    banco.innerHTML = '';
+    mezclar([...silabas, ...sobras]).forEach((silaba) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'ficha'; b.dataset.silaba = silaba;
+      b.style.setProperty('--c', colorSilaba(silaba));
+      b.innerHTML = `<span class="letra">${silaba}</span>`;
+      b.addEventListener('click', () => palabras.tocar(silaba, b));
+      banco.appendChild(b);
+    });
+
+    $('#pista-palabras').textContent = 'Toca las sílabas en orden 👇';
+    voz.hablar(`${palabras.texto()}. Arma la palabra`, { rate: 0.85 });
+  },
+
+  tocar(silaba, boton) {
+    if (palabras.bloqueado || boton.classList.contains('usada')) return;
+    const esperada = palabras.actual.silabas[palabras.puestas.length];
+    if (silaba !== esperada) {
+      // No se coloca, pero igual suena: así el niño oye en qué se diferencia.
+      sonidos.error();
+      boton.classList.remove('mal'); void boton.offsetWidth; boton.classList.add('mal');
+      $('#pista-palabras').textContent = 'Esa no… escucha otra vez 👂';
+      voz.silaba(silaba, { rate: 0.75 });
+      return;
+    }
+    sonidos.pop();
+    boton.classList.remove('brilla');
+    boton.classList.add('usada');
+    const hueco = $('#huecos').children[palabras.puestas.length];
+    hueco.dataset.vacio = 'false';
+    hueco.style.background = colorSilaba(silaba);
+    hueco.querySelector('.letra').textContent = silaba;
+    palabras.puestas.push({ silaba, boton, hueco });
+    if (palabras.puestas.length === palabras.actual.silabas.length) palabras.completar();
+    else { $('#pista-palabras').textContent = '¡Bien! Sigue 👏'; voz.silaba(silaba, { rate: 0.8 }); }
+  },
+
+  // Quita la última sílaba colocada y devuelve su ficha al banco.
+  quitar() {
+    if (palabras.bloqueado) return;
+    const ultima = palabras.puestas.pop();
+    if (!ultima) return;
+    ultima.boton.classList.remove('usada');
+    ultima.hueco.dataset.vacio = 'true';
+    ultima.hueco.style.background = '';
+    ultima.hueco.querySelector('.letra').textContent = '';
+    $('#pista-palabras').textContent = 'Toca las sílabas en orden 👇';
+  },
+
+  completar() {
+    palabras.bloqueado = true;
+    palabras.aciertos += 1;
+    $('#huecos').classList.add('completa');
+    sonidos.acierto(); confeti(45); estrellas.sumar(1);
+    $('#mascota').classList.add('saltando');
+    setTimeout(() => $('#mascota').classList.remove('saltando'), 700);
+    const palabra = palabras.texto();
+    $('#pista-palabras').textContent = `¡${caso.mostrar(palabra)}! 🎉`;
+    // La palabra recién armada queda lista para repasarla en "Escribe".
+    escribe.fijar(palabra, 'palabra');
+    voz.hablar(`${azar(FELICITACIONES)} ${palabra}`, { rate: 0.9 });
+    setTimeout(() => palabras.nueva(), 2800);
+  },
+
+  // Resalta y dice la sílaba que toca ahora.
+  pista() {
+    if (palabras.bloqueado || !palabras.actual) return;
+    const esperada = palabras.actual.silabas[palabras.puestas.length];
+    const fichas = [...$('#banco-silabas').children];
+    fichas.forEach((b) => b.classList.remove('brilla'));
+    const ficha = fichas.find((b) => b.dataset.silaba === esperada && !b.classList.contains('usada'));
+    if (ficha) { void ficha.offsetWidth; ficha.classList.add('brilla'); }
+    voz.silaba(esperada, { rate: 0.7 });
+  },
+
+  decir() {
+    if (!palabras.actual) return;
+    voz.hablar(palabras.texto(), { rate: 0.85 });
+  },
+
+  // Lee la palabra sílaba a sílaba y luego entera: "man... za... na. Manzana".
+  decirPorSilabas() {
+    if (!palabras.actual) return;
+    const trozos = palabras.actual.silabas.map((s) => pronunciar(s)).join('... ');
+    voz.hablar(`${trozos}. ${palabras.texto()}`, { rate: 0.7 });
+  },
+};
+
+/* =========================================================
    PANTALLA: ESCRIBE (repasar la sílaba con el dedo)
    ========================================================= */
 const escribe = {
-  silaba: 'ma',
+  texto: 'ma',
+  tipo: 'silaba',   // 'silaba' | 'palabra': cambia cómo se lee en voz alta
   color: '#e8590c',
   lienzo: null, ctx: null,
   trazos: [],        // puntos normalizados (0..1) para que sobrevivan a cambios de tamaño
@@ -435,8 +584,8 @@ const escribe = {
     l.addEventListener('pointerup', escribe.terminar);
     l.addEventListener('pointercancel', escribe.terminar);
     $('#btn-borrar').addEventListener('click', () => { sonidos.pop(); escribe.trazos = []; escribe.pintar(); });
-    $('#btn-otra').addEventListener('click', () => { sonidos.pop(); escribe.fijarSilaba(azar(TODAS_LAS_SILABAS).silaba); voz.silaba(escribe.silaba, { rate: 0.8 }); });
-    $('#btn-oir-trazo').addEventListener('click', () => voz.silaba(escribe.silaba, { rate: 0.8 }));
+    $('#btn-otra').addEventListener('click', () => { sonidos.pop(); escribe.otro(); escribe.decir(); });
+    $('#btn-oir-trazo').addEventListener('click', () => escribe.decir());
     document.querySelectorAll('.crayon').forEach((c) => {
       c.addEventListener('click', () => {
         sonidos.pop();
@@ -459,8 +608,25 @@ const escribe = {
     escribe.pintar();
   },
 
-  fijarSilaba(silaba) {
-    escribe.silaba = silaba; escribe.trazos = []; escribe.pintar();
+  // Fija lo que hay que repasar: una sílaba o una palabra corta.
+  fijar(texto, tipo = 'silaba') {
+    escribe.texto = texto; escribe.tipo = tipo; escribe.trazos = []; escribe.pintar();
+  },
+
+  // Sortea el siguiente trazo: casi siempre una sílaba y de vez en cuando una
+  // palabra corta (de una o dos sílabas), que ya cabe en el lienzo.
+  otro() {
+    if (Math.random() < 0.3) {
+      const cortas = PALABRAS_SILABAS.filter((p) => p.silabas.length <= 2);
+      escribe.fijar(unirSilabas(azar(cortas).silabas), 'palabra');
+    } else {
+      escribe.fijar(azar(TODAS_LAS_SILABAS).silaba, 'silaba');
+    }
+  },
+
+  decir(rate = 0.8) {
+    if (escribe.tipo === 'palabra') voz.hablar(escribe.texto, { rate });
+    else voz.silaba(escribe.texto, { rate });
   },
 
   punto(ev) {
@@ -492,7 +658,7 @@ const escribe = {
     if (!escribe.ctx) return;
     const { ctx, lienzo } = escribe;
     const W = lienzo.width, H = lienzo.height;
-    const texto = caso.mostrar(escribe.silaba);
+    const texto = caso.mostrar(escribe.texto);
     const fuente = getComputedStyle(document.body).fontFamily;
     // La letra se hace tan grande como quepa: 88% del ancho y 70% del alto.
     let tam = Math.floor(H * 0.7);
@@ -541,6 +707,7 @@ document.querySelectorAll('.pestana').forEach((p) => {
     document.querySelectorAll('.pantalla').forEach((x) => x.classList.remove('activa'));
     p.classList.add('activa');
     $(`#pantalla-${p.dataset.pantalla}`).classList.add('activa');
+    if (p.dataset.pantalla === 'palabras') palabras.entrar();
     if (p.dataset.pantalla === 'adivina') adivina.entrar();
     if (p.dataset.pantalla === 'escribe') requestAnimationFrame(() => escribe.ajustarTamano());
   });
@@ -582,6 +749,7 @@ window.addEventListener('appinstalled', () => { $('#btn-instalar')?.remove(); av
    ARRANQUE
    ========================================================= */
 formar.iniciar();
+palabras.iniciar();
 adivina.iniciar();
 escribe.iniciar();
 ajustes.iniciar();

@@ -47,8 +47,18 @@ const TILDES = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
 const EXCEPCIONES = { ya: 'lláh', ye: 'lléh', yi: 'llíh', yo: 'yo', yu: 'llúh' };
 export function pronunciar(silaba) {
   if (EXCEPCIONES[silaba]) return EXCEPCIONES[silaba];
-  const ultima = silaba[silaba.length - 1];
-  return TILDES[ultima] ? silaba.slice(0, -1) + TILDES[ultima] + 'h' : silaba;
+  // Las que ya traen su propia tilde ("tén", "vión", "plá") se leen tal cual.
+  if (/[áéíóú]/.test(silaba)) return silaba;
+  // La última vocal es la que suena fuerte en una sílaba suelta.
+  const partes = silaba.match(/^(.*)([aeiou])([^aeiou]*)$/);
+  if (!partes) return silaba;
+  const [, antes, vocal, despues] = partes;
+  // Sílaba abierta ("ma", "llo"): tilde + "h" muda.
+  if (!despues) return antes + TILDES[vocal] + 'h';
+  // Sílaba cerrada ("pan", "sol", "car"): la consonante final ya evita que se
+  // confunda con una vocal suelta, pero la tilde impide que se lea como
+  // abreviatura ("pág.", "núm.") y marca bien el golpe de voz.
+  return antes + TILDES[vocal] + despues;
 }
 
 // Nombre de la letra tal como debe leerlo la voz (los nombres de dos letras
@@ -87,3 +97,110 @@ export const PALABRAS = {
 export const FELICITACIONES = [
   '¡Muy bien!', '¡Excelente!', '¡Genial!', '¡Lo lograste!', '¡Eres una estrella!', '¡Bravo!', '¡Fantástico!',
 ];
+
+/* =========================================================
+   PALABRAS PARTIDAS EN SÍLABAS (pantalla "Palabras")
+   =========================================================
+   Cada palabra viene ya separada como se lee en voz alta. La lista mezcla
+   sílabas abiertas ("ca-sa") con sílabas cerradas o inversas, las que terminan
+   en consonante ("sol", "car-ta", "pas-tel", "ár-bol"), que son el siguiente
+   paso después de dominar consonante + vocal.
+   Están ordenadas de menos a más sílabas: la pantalla va soltando las largas
+   a medida que el niño acierta. */
+export const PALABRAS_SILABAS = [
+  // Una sola sílaba, todas cerradas.
+  { silabas: ['sol'], emoji: '☀️' },
+  { silabas: ['pan'], emoji: '🍞' },
+  { silabas: ['flor'], emoji: '🌸' },
+  { silabas: ['mar'], emoji: '🌊' },
+  { silabas: ['pez'], emoji: '🐟' },
+  { silabas: ['luz'], emoji: '💡' },
+  { silabas: ['sal'], emoji: '🧂' },
+  { silabas: ['tren'], emoji: '🚂' },
+  // Dos sílabas abiertas.
+  { silabas: ['ma', 'má'], emoji: '👩' },
+  { silabas: ['pa', 'pá'], emoji: '👨' },
+  { silabas: ['ca', 'sa'], emoji: '🏠' },
+  { silabas: ['ga', 'to'], emoji: '🐱' },
+  { silabas: ['pe', 'rro'], emoji: '🐶' },
+  { silabas: ['lu', 'na'], emoji: '🌙' },
+  { silabas: ['me', 'sa'], emoji: '🍽️' },
+  { silabas: ['pa', 'to'], emoji: '🦆' },
+  { silabas: ['ra', 'na'], emoji: '🐸' },
+  { silabas: ['fo', 'ca'], emoji: '🦭' },
+  { silabas: ['va', 'ca'], emoji: '🐮' },
+  { silabas: ['ta', 'za'], emoji: '☕' },
+  { silabas: ['so', 'pa'], emoji: '🍲' },
+  { silabas: ['pi', 'ña'], emoji: '🍍' },
+  { silabas: ['si', 'lla'], emoji: '🪑' },
+  { silabas: ['que', 'so'], emoji: '🧀' },
+  { silabas: ['glo', 'bo'], emoji: '🎈' },
+  { silabas: ['li', 'bro'], emoji: '📖' },
+  { silabas: ['ti', 'gre'], emoji: '🐯' },
+  { silabas: ['re', 'loj'], emoji: '⏰' },
+  // Dos sílabas con alguna cerrada.
+  { silabas: ['car', 'ta'], emoji: '✉️' },
+  { silabas: ['cam', 'po'], emoji: '🏞️' },
+  { silabas: ['bar', 'co'], emoji: '⛵' },
+  { silabas: ['cas', 'co'], emoji: '⛑️' },
+  { silabas: ['tam', 'bor'], emoji: '🥁' },
+  { silabas: ['pas', 'tel'], emoji: '🎂' },
+  { silabas: ['ár', 'bol'], emoji: '🌳' },
+  { silabas: ['sar', 'tén'], emoji: '🍳' },
+  { silabas: ['del', 'fín'], emoji: '🐬' },
+  { silabas: ['jar', 'dín'], emoji: '🌷' },
+  { silabas: ['a', 'vión'], emoji: '✈️' },
+  { silabas: ['ca', 'mión'], emoji: '🚚' },
+  { silabas: ['ra', 'tón'], emoji: '🐭' },
+  { silabas: ['le', 'ón'], emoji: '🦁' },
+  { silabas: ['me', 'lón'], emoji: '🍈' },
+  // Tres sílabas.
+  { silabas: ['za', 'pa', 'to'], emoji: '👟' },
+  { silabas: ['pe', 'lo', 'ta'], emoji: '⚽' },
+  { silabas: ['to', 'ma', 'te'], emoji: '🍅' },
+  { silabas: ['plá', 'ta', 'no'], emoji: '🍌' },
+  { silabas: ['ca', 'mi', 'sa'], emoji: '👕' },
+  { silabas: ['ji', 'ra', 'fa'], emoji: '🦒' },
+  { silabas: ['ti', 'je', 'ras'], emoji: '✂️' },
+  { silabas: ['man', 'za', 'na'], emoji: '🍎' },
+  { silabas: ['ven', 'ta', 'na'], emoji: '🪟' },
+  { silabas: ['es', 'tre', 'lla'], emoji: '⭐' },
+  { silabas: ['mon', 'ta', 'ña'], emoji: '⛰️' },
+  { silabas: ['ser', 'pien', 'te'], emoji: '🐍' },
+  { silabas: ['cas', 'ti', 'llo'], emoji: '🏰' },
+  { silabas: ['can', 'gre', 'jo'], emoji: '🦀' },
+  { silabas: ['cham', 'pi', 'ñón'], emoji: '🍄' },
+  { silabas: ['pin', 'güi', 'no'], emoji: '🐧' },
+  { silabas: ['hos', 'pi', 'tal'], emoji: '🏥' },
+  { silabas: ['ca', 'ra', 'col'], emoji: '🐌' },
+  { silabas: ['gi', 'ra', 'sol'], emoji: '🌻' },
+  { silabas: ['co', 'ra', 'zón'], emoji: '❤️' },
+  { silabas: ['cua', 'der', 'no'], emoji: '📒' },
+  { silabas: ['pa', 'ra', 'guas'], emoji: '☔' },
+  // Cuatro sílabas.
+  { silabas: ['ma', 'ri', 'po', 'sa'], emoji: '🦋' },
+  { silabas: ['e', 'le', 'fan', 'te'], emoji: '🐘' },
+  { silabas: ['bi', 'ci', 'cle', 'ta'], emoji: '🚲' },
+  { silabas: ['cho', 'co', 'la', 'te'], emoji: '🍫' },
+  { silabas: ['es', 'ca', 'le', 'ra'], emoji: '🪜' },
+  { silabas: ['se', 'má', 'fo', 'ro'], emoji: '🚦' },
+  { silabas: ['ham', 'bur', 'gue', 'sa'], emoji: '🍔' },
+];
+
+// La palabra completa, tal como se escribe.
+export const unirSilabas = (silabas) => silabas.join('');
+
+// Color de una sílaba: el de su consonante inicial, para que la misma letra se
+// reconozca siempre del mismo color. Si empieza por vocal ("es", "ár"), se usa
+// el color de esa vocal.
+const SIN_TILDE = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u', ü: 'u' };
+const COLOR_VOCAL = { a: '#fd79a8', e: '#fdcb6e', i: '#00cec9', o: '#0984e3', u: '#6c5ce7' };
+export function colorSilaba(silaba) {
+  const s = silaba.toLowerCase();
+  const doble = CONSONANTES.find((c) => c.letra.length === 2 && s.startsWith(c.letra));
+  if (doble) return doble.color;
+  const simple = CONSONANTES.find((c) => c.letra === s[0]);
+  if (simple) return simple.color;
+  const vocal = s.match(/[aeiouáéíóúü]/);
+  return (vocal && COLOR_VOCAL[SIN_TILDE[vocal[0]] || vocal[0]]) || '#6c5ce7';
+}

@@ -129,6 +129,7 @@ body[data-caso="minus"] .letra { text-transform: lowercase; }
 .boton-palabra { background: #e17055; }
 .boton-letras { background: #0984e3; }
 .boton-vaciar { background: #636e72; }
+.boton-pista { background: #f0932b; }
 
 .pista { margin: 0; text-align: center; color: var(--blanco); font-weight: 700; font-size: 1.1rem; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15); }
 
@@ -156,6 +157,30 @@ body[data-caso="minus"] .letra { text-transform: lowercase; }
 .consonante:active, .vocal:active { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18); }
 .consonante.seleccionada, .vocal.seleccionada { outline: 5px solid var(--blanco); outline-offset: -5px; transform: scale(1.08); }
 .saltito { animation: saltar 0.4s ease; }
+
+/* Palabras: armar una palabra con sus sílabas */
+.dibujo { font-size: 4.2rem; line-height: 1.15; animation: balanceo 3s ease-in-out infinite; }
+.huecos { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.hueco {
+  min-width: 76px; height: 72px; padding: 0 12px; border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.2rem; font-weight: 700; color: var(--blanco);
+  border: 4px dashed #dfe6e9; background: #f8f9fa;
+  transition: background 0.25s;
+}
+.hueco[data-vacio="false"] { border-style: solid; border-color: transparent; animation: pop 0.3s ease; }
+.huecos.completa .hueco { animation: saltar 0.6s ease; }
+.banco { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding-bottom: 8px; }
+.ficha {
+  border: 0; border-radius: 18px; padding: 14px 18px; min-width: 78px;
+  font: inherit; font-weight: 700; font-size: 2rem; color: var(--blanco);
+  background: var(--c); box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18); cursor: pointer;
+  transition: transform 0.15s, opacity 0.25s;
+}
+.ficha:active { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.18); }
+.ficha.usada { opacity: 0.2; pointer-events: none; }
+.ficha.mal { animation: temblar 0.5s ease; }
+.ficha.brilla { outline: 5px solid var(--blanco); outline-offset: -5px; animation: latido 0.6s ease 2; }
 
 /* Adivina */
 .tarjeta-juego { gap: 8px; }
@@ -226,6 +251,12 @@ body[data-caso="minus"] .letra { text-transform: lowercase; }
   h1 { font-size: 1.05rem; }
   .mascota { font-size: 1.9rem; }
   .cabecera { padding: 8px 12px; }
+  .pestanas { gap: 4px; padding-left: 6px; padding-right: 6px; }
+  .pestana { font-size: 0.78rem; padding: 4px 2px; }
+  .pestana span { font-size: 1.3rem; }
+  .hueco, .ficha { font-size: 1.8rem; min-width: 64px; }
+  .hueco { height: 62px; padding: 0 8px; }
+  .ficha { padding: 12px 14px; }
 }
 
 /* Modal de ajustes */
@@ -243,6 +274,9 @@ body[data-caso="minus"] .letra { text-transform: lowercase; }
   .consonante { font-size: 2.4rem; border-radius: 22px; }
   .vocal { width: 80px; height: 80px; font-size: 2.5rem; }
   .ranura, .resultado { height: 96px; font-size: 3.2rem; }
+  .hueco { min-width: 100px; height: 92px; font-size: 2.8rem; }
+  .ficha { min-width: 104px; font-size: 2.6rem; padding: 16px 22px; }
+  .dibujo { font-size: 5.5rem; }
   .resultado { font-size: 3.8rem; }
   h1 { font-size: 1.9rem; }
 }

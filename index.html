@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Mis Sílabas</title>
-  <meta name="description" content="Juego para aprender a leer y escribir: junta consonantes con vocales y escucha cómo suenan." />
+  <meta name="description" content="Juego para aprender a leer y escribir: junta consonantes con vocales, forma palabras con sílabas y escucha cómo suenan." />
   <meta name="theme-color" content="#6c5ce7" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -73,6 +73,25 @@
       <div class="consonantes" id="consonantes"></div>
     </section>
 
+    <!-- ===== PANTALLA: PALABRAS ===== -->
+    <section class="pantalla" id="pantalla-palabras">
+      <div class="tarjeta">
+        <div class="dibujo" id="palabra-dibujo" aria-hidden="true">🍎</div>
+        <div class="huecos" id="huecos"></div>
+        <div class="botones-tarjeta">
+          <button class="boton boton-sonido" id="btn-oir-palabra" type="button">🔊 Escuchar</button>
+          <button class="boton boton-letras" id="btn-silabear" type="button">🐢 Sílabas</button>
+          <button class="boton boton-pista" id="btn-pista" type="button">💡 Pista</button>
+          <button class="boton boton-vaciar" id="btn-quitar" type="button" aria-label="Quitar la última sílaba">⬅️ Quitar</button>
+          <button class="boton boton-lento" id="btn-otra-palabra" type="button">🎲 Otra</button>
+        </div>
+      </div>
+
+      <p class="pista" id="pista-palabras">Toca las sílabas en orden 👇</p>
+
+      <div class="banco" id="banco-silabas"></div>
+    </section>
+
     <!-- ===== PANTALLA: ADIVINA ===== -->
     <section class="pantalla" id="pantalla-adivina">
       <div class="tarjeta tarjeta-juego">
@@ -107,6 +126,7 @@
 
   <nav class="pestanas" aria-label="Secciones">
     <button class="pestana activa" data-pantalla="formar" type="button"><span>🧩</span>Formar</button>
+    <button class="pestana" data-pantalla="palabras" type="button"><span>📝</span>Palabras</button>
     <button class="pestana" data-pantalla="adivina" type="button"><span>🎧</span>Adivina</button>
     <button class="pestana" data-pantalla="escribe" type="button"><span>✍️</span>Escribe</button>
   </nav>

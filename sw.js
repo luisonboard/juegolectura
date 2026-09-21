@@ -1,5 +1,5 @@
 // Service worker: guarda la app completa para que funcione sin internet.
-const VERSION = 'mis-silabas-v4';
+const VERSION = 'mis-silabas-v5';
 const ARCHIVOS = [
   './',
   './index.html',
