@@ -5,7 +5,7 @@
 // recarga trae lo último; sin internet, se sirve lo guardado. La versión
 // anterior hacía lo contrario (primero la caché) y por eso recargar el
 // navegador nunca mostraba los cambios.
-const VERSION = 'mis-silabas-v8';
+const VERSION = 'mis-silabas-v10';
 const ARCHIVOS = [
   './',
   './index.html',
