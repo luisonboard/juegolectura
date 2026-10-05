@@ -51,6 +51,9 @@ const ES_APPLE = typeof navigator !== 'undefined' &&
 const H = ES_APPLE ? 'h' : '';
 const EXCEPCIONES = { ya: 'llá' + H, ye: 'llé' + H, yi: 'llí' + H, yo: 'yo', yu: 'llú' + H };
 export function pronunciar(silaba) {
+  // Fuera de Apple (Android/Chrome) el motor deletrea los textos con tilde o "h"
+  // ("eme, a con acento agudo"): allí la sílaba se lee tal cual, sin trucos.
+  if (!ES_APPLE) return silaba.replace(/^y([aeiu])$/, 'll$1');
   if (EXCEPCIONES[silaba]) return EXCEPCIONES[silaba];
   // Las que ya traen su propia tilde ("tén", "vión", "plá") se leen tal cual.
   if (/[áéíóú]/.test(silaba)) return silaba;
