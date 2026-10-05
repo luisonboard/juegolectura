@@ -44,7 +44,12 @@ export function formarSilaba(consonante, vocal) {
 const TILDES = { a: 'á', e: 'é', i: 'í', o: 'ó', u: 'ú' };
 // Casos especiales: la "y" suelta se lee como "i griega", así que se escribe con
 // "ll", que suena igual en las voces en español (yeísmo).
-const EXCEPCIONES = { ya: 'lláh', ye: 'lléh', yi: 'llíh', yo: 'yo', yu: 'llúh' };
+// La "h" muda solo hace falta en los lectores de Apple; el motor de Google en
+// Android la deletrea ("eme, a con acento agudo, hache"), así que allí no se usa.
+const ES_APPLE = typeof navigator !== 'undefined' &&
+  (/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) || navigator.platform === 'MacIntel');
+const H = ES_APPLE ? 'h' : '';
+const EXCEPCIONES = { ya: 'llá' + H, ye: 'llé' + H, yi: 'llí' + H, yo: 'yo', yu: 'llú' + H };
 export function pronunciar(silaba) {
   if (EXCEPCIONES[silaba]) return EXCEPCIONES[silaba];
   // Las que ya traen su propia tilde ("tén", "vión", "plá") se leen tal cual.
@@ -54,7 +59,7 @@ export function pronunciar(silaba) {
   if (!partes) return silaba;
   const [, antes, vocal, despues] = partes;
   // Sílaba abierta ("ma", "llo"): tilde + "h" muda.
-  if (!despues) return antes + TILDES[vocal] + 'h';
+  if (!despues) return antes + TILDES[vocal] + H;
   // Sílaba cerrada ("pan", "sol", "car"): la consonante final ya evita que se
   // confunda con una vocal suelta, pero la tilde impide que se lea como
   // abreviatura ("pág.", "núm.") y marca bien el golpe de voz.
